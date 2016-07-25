@@ -45,6 +45,10 @@ defmodule InfluxCopy do
           end_time: opts[:end],
         ]
         select_query = QueryBuilder.create_query(query_opts)
+        source_data = select_query
+          |> SrcConn.query(database: src_db, precision: :seconds)
+        IO.puts select_query
+        Logger.warn inspect source_data
 
       _ ->
         errors
