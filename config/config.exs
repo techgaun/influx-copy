@@ -2,6 +2,18 @@
 # and its dependencies with the aid of the Mix.Config module.
 use Mix.Config
 
+config :influx_copy, InfluxCopy.SrcConn,
+  pool:   [ max_overflow: 10, size: 5 ],
+  port:   8086,
+  scheme: "https",
+  writer: Instream.Writer.Line
+
+config :influx_copy, InfluxCopy.DestConn,
+  pool:   [ max_overflow: 10, size: 5 ],
+  port:   8086,
+  scheme: "https",
+  writer: Instream.Writer.Line
+
 # This configuration is loaded before any dependency and is restricted
 # to this project. If another project depends on this project, this
 # file won't be loaded nor affect the parent project. For this reason,
