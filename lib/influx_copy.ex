@@ -3,13 +3,13 @@ defmodule InfluxCopy do
   Module entrypoint for influx copy script
   """
 
-  alias InfluxCopy.{SrcConn, DestConn}
+  alias InfluxCopy.{SrcConn, DestConn, QueryBuilder}
   require Logger
   @conn_error "connection string invalid. Format example: https://user:pass@host:port/db:measurement"
   def main(args \\ []) do
     {opts, _, _} = OptionParser.parse(args,
-      switches: [start: :integer, end: :integer, src: :string, dest: :string, update_tags: :string],
-      aliases: [s: :start, e: :end, S: :src, d: :dest, u: :update_tags]
+      switches: [start: :integer, end: :integer, src: :string, dest: :string, update_tags: :string, fields: :string],
+      aliases: [s: :start, e: :end, S: :src, d: :dest, u: :update_tags, f: :fields]
       )
     src = parse_conn(opts[:src])
     dest = parse_conn(opts[:dest])
@@ -37,8 +37,14 @@ defmodule InfluxCopy do
         {dest_config, dest_db, dest_measurement} = get_influx_config(DestConn.config, dest)
         :ok = Application.put_env(:influx_copy, SrcConn, src_config)
         :ok = Application.put_env(:influx_copy, DestConn, dest_config)
-        Logger.warn inspect InfluxCopy.SrcConn.config
-        Logger.warn inspect InfluxCopy.DestConn.config
+
+        query_opts = [
+          selection: opts[:fields],
+          measurement: src_measurement,
+          start_time: opts[:start],
+          end_time: opts[:end],
+        ]
+        select_query = QueryBuilder.create_query(query_opts)
 
       _ ->
         errors
