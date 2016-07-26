@@ -56,7 +56,7 @@ defmodule InfluxCopy do
         ]
         select_query = QueryBuilder.create_query(query_opts)
         source_data = select_query
-          |> SrcConn.query(database: src_db, precision: :seconds)
+          |> SrcConn.query(database: src_db, precision: :seconds, timeout: 30_000)
 
         case source_data do
           %{results: [%{series: [%{columns: columns, values: values}]}]} ->

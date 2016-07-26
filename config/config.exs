@@ -6,13 +6,15 @@ config :influx_copy, InfluxCopy.SrcConn,
   pool:   [ max_overflow: 10, size: 5 ],
   port:   8086,
   scheme: "https",
-  writer: Instream.Writer.Line
+  writer: Instream.Writer.Line,
+  query_timeout: 30_000
 
 config :influx_copy, InfluxCopy.DestConn,
   pool:   [ max_overflow: 10, size: 5 ],
   port:   8086,
   scheme: "https",
-  writer: Instream.Writer.Line
+  writer: Instream.Writer.Line,
+  query_timeout: 30_000
 
 # This configuration is loaded before any dependency and is restricted
 # to this project. If another project depends on this project, this
