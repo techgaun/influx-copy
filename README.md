@@ -2,6 +2,16 @@
 
 > A generic influx copy script with ability to update values of tags based on given information
 
+## Installation
+
+Make sure you have elixir 1.3+ installed
+
+Grab the [influx-copy executable](https://github.com/Brightergy/influx-copy/raw/master/influx_copy) and you are good to go.
+
+```shell
+sudo wget https://github.com/Brightergy/influx-copy/raw/master/influx_copy -O /usr/local/bin
+```
+
 ## Usage
 
 ```elixir
