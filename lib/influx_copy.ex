@@ -1,6 +1,16 @@
 defmodule InfluxCopy do
   @moduledoc """
   Module entrypoint for influx copy script
+
+  cli args you can pass
+
+    --start/-s unix_timestamp
+    --end/-e unix_timestamp
+    --src/-S https://user:pass@host:port/db:measurement
+    --dest/-d https://user:pass@host:port/db:measurement
+    --tags/-t facility_id,device_id,company_id
+    --update_tags/-u facility_id:1->3
+    --fields/-f grid (defaults to * i.e. all fields are copied over)
   """
 
   alias InfluxCopy.{SrcConn, DestConn, QueryBuilder}
@@ -8,8 +18,8 @@ defmodule InfluxCopy do
   @conn_error "connection string invalid. Format example: https://user:pass@host:port/db:measurement"
   def main(args \\ []) do
     {opts, _, _} = OptionParser.parse(args,
-      switches: [start: :integer, end: :integer, src: :string, dest: :string, update_tags: :string, fields: :string],
-      aliases: [s: :start, e: :end, S: :src, d: :dest, u: :update_tags, f: :fields]
+      switches: [start: :integer, end: :integer, src: :string, dest: :string, tags: :string, update_tags: :string, fields: :string],
+      aliases: [s: :start, e: :end, S: :src, d: :dest, t: :tags, u: :update_tags, f: :fields]
       )
     src = parse_conn(opts[:src])
     dest = parse_conn(opts[:dest])
@@ -55,7 +65,23 @@ defmodule InfluxCopy do
               data_to_write = List.zip([columns | [x]])
                 |> Enum.into(%{})
                 |> update_tag_value(opts[:update_tags])
-              Logger.warn inspect data_to_write
+
+              timestamp = data_to_write["time"]
+              {tags, fields} = Map.delete(data_to_write, "time")
+                |> split_fields_tags(opts[:tags])
+              influx_data = %{
+                database: dest_db,
+                points: [
+                  %{
+                    measurement: dest_measurement,
+                    fields: fields,
+                    tags: tags,
+                    timestamp: timestamp
+                  }
+                ]
+              }
+              [influx_data]
+              |> DestConn.write(database: dest_db, precision: :seconds, async: false)
             end)
 
           %{results: [%{}]} ->
@@ -71,7 +97,6 @@ defmodule InfluxCopy do
           IO.puts x
         end)
     end
-    IO.puts "Not implemented yet"
   end
 
   def parse_conn(str) when is_bitstring(str) do
@@ -117,4 +142,19 @@ defmodule InfluxCopy do
     end)
   end
   def update_tag_value(data, _), do: data
+
+  def split_fields_tags(data, tags) when is_bitstring(tags) do
+    tags = tags
+      |> String.split(",")
+    tags_map = tags
+      |> Enum.reduce(%{}, fn (x, acc) ->
+        acc = Map.put(acc, x, Map.get(data, x))
+      end)
+    fields_map = tags
+      |> Enum.reduce(data, fn (x, acc) ->
+        acc = Map.delete(acc, x)
+      end)
+    {tags_map, fields_map}
+  end
+  def split_fields_tags(data, _), do: {%{}, data}
 end
