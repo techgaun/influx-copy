@@ -47,8 +47,23 @@ defmodule InfluxCopy do
         select_query = QueryBuilder.create_query(query_opts)
         source_data = select_query
           |> SrcConn.query(database: src_db, precision: :seconds)
-        IO.puts select_query
-        Logger.warn inspect source_data
+
+        case source_data do
+          %{results: [%{series: [%{columns: columns, values: values}]}]} ->
+            values
+            |> Enum.each(fn x ->
+              data_to_write = List.zip([columns | [x]])
+                |> Enum.into(%{})
+                |> update_tag_value(opts[:update_tags])
+              Logger.warn inspect data_to_write
+            end)
+
+          %{results: [%{}]} ->
+            IO.puts "No data in the given timeframe on source connection..."
+
+          _ ->
+            IO.puts "Unknown issue occurred while reading from source..."
+        end
 
       _ ->
         errors
@@ -79,4 +94,27 @@ defmodule InfluxCopy do
       |> Keyword.put(:auth, [username: user, password: pass])
     {new_config, db, measurement}
   end
+
+  @doc """
+  ## Examples
+
+      iex> InfluxCopy.update_tag_value(%{"a" => 1}, nil)
+      %{"a" => 1}
+
+      iex> InfluxCopy.update_tag_value(%{"tag_id" => "1"}, "tag_id:1->2")
+      %{"tag_id" => "2"}
+  """
+  def update_tag_value(data, tags) when is_bitstring(tags) do
+    tags
+    |> String.split(",")
+    |> Enum.reduce(data, fn (x, acc) ->
+      [tag | [mod]] = String.split(x, ":")
+      [from | [to]] = String.split(mod, "->")
+      if from === Map.get(acc, tag) do
+        acc = Map.put(acc, tag, to)
+      end
+      acc
+    end)
+  end
+  def update_tag_value(data, _), do: data
 end
