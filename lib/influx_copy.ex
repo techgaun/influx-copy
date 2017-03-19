@@ -14,8 +14,9 @@ defmodule InfluxCopy do
   """
 
   alias InfluxCopy.{SrcConn, DestConn, QueryBuilder}
-  require Logger
+
   @conn_error "connection string invalid. Format example: https://user:pass@host:port/db:measurement"
+
   def main(args \\ []) do
     {opts, _, _} = OptionParser.parse(args,
       switches: [start: :integer, end: :integer, src: :string, dest: :string, tags: :string, update_tags: :string, fields: :string],
@@ -23,13 +24,10 @@ defmodule InfluxCopy do
       )
     src = parse_conn(opts[:src])
     dest = parse_conn(opts[:dest])
-    errors = []
-    if src |> is_nil do
-      errors = ["Source #{@conn_error}" | errors]
-    end
-    if dest |> is_nil do
-      errors = ["Destination #{@conn_error}" | errors]
-    end
+
+    errors = if is_nil(src), do: ["Source #{@conn_error}"], else: []
+
+    errors = if is_nil(dest), do: ["Destination #{@conn_error}" | errors], else: errors
 
     case Enum.count(errors) do
       0 ->
@@ -56,7 +54,7 @@ defmodule InfluxCopy do
         ]
         select_query = QueryBuilder.create_query(query_opts)
         source_data = select_query
-          |> SrcConn.query(database: src_db, precision: :seconds, timeout: 30_000)
+          |> SrcConn.query(database: src_db, precision: :second, timeout: 60_000)
 
         case source_data do
           %{results: [%{series: [%{columns: columns, values: values}]}]} ->
@@ -81,7 +79,7 @@ defmodule InfluxCopy do
                 ]
               }
               [influx_data]
-              |> DestConn.write(database: dest_db, precision: :seconds, async: false)
+              |> DestConn.write(database: dest_db, precision: :second, async: false)
             end)
 
           %{results: [%{}]} ->
@@ -102,7 +100,7 @@ defmodule InfluxCopy do
   def parse_conn(str) when is_bitstring(str) do
     re = ~r/(.*):\/\/(.*):(.*)@(.*):(.*)\/(.*):(.*)/
     case Regex.run(re, str) do
-      [h | t] = [_, scheme, user, pass, host, port, db, measurement] ->
+      [_h | t] = [_, _scheme, _user, _pass, _host, _port, _db, _measurement] ->
         t
       _ ->
         nil
@@ -136,9 +134,10 @@ defmodule InfluxCopy do
       [tag | [mod]] = String.split(x, ":")
       [from | [to]] = String.split(mod, "->")
       if from === Map.get(acc, tag) do
-        acc = Map.put(acc, tag, to)
+        Map.put(acc, tag, to)
+      else
+        acc
       end
-      acc
     end)
   end
   def update_tag_value(data, _), do: data
@@ -148,11 +147,11 @@ defmodule InfluxCopy do
       |> String.split(",")
     tags_map = tags
       |> Enum.reduce(%{}, fn (x, acc) ->
-        acc = Map.put(acc, x, Map.get(data, x))
+        Map.put(acc, x, Map.get(data, x))
       end)
     fields_map = tags
       |> Enum.reduce(data, fn (x, acc) ->
-        acc = Map.delete(acc, x)
+        Map.delete(acc, x)
       end)
     {tags_map, fields_map}
   end
