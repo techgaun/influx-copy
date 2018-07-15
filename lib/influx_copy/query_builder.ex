@@ -29,6 +29,7 @@ defmodule InfluxCopy.QueryBuilder do
   end
 
   def build_selection(nil), do: "*"
+
   def build_selection(selection) do
     selection
     |> String.split(",")
@@ -40,18 +41,20 @@ defmodule InfluxCopy.QueryBuilder do
     |> build_where_time(start_time, ">=")
     |> build_where_time(end_time, "<=")
   end
+
   def build_where_time(query, time, operator) do
     case is_integer(time) do
       true ->
         case String.contains?(query, "where time") do
           true ->
             "#{query} and time #{operator} #{time}s"
+
           false ->
             "#{query} where time #{operator} #{time}s"
         end
+
       false ->
         query
     end
   end
-
 end

@@ -4,7 +4,7 @@
 
 ## Installation
 
-Make sure you have Erlang 18+ installed. Elixir is not needed to run the executable but if you wish to build on your own, you will need Elixir 1.3+.
+Make sure you have elixir 1.3+ installed
 
 Grab the [influx-copy executable](https://github.com/Brightergy/influx-copy/raw/master/influx_copy) and you are good to go.
 

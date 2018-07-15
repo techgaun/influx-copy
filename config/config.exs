@@ -3,15 +3,15 @@
 use Mix.Config
 
 config :influx_copy, InfluxCopy.SrcConn,
-  pool:   [ max_overflow: 10, size: 5 ],
-  port:   8086,
+  pool: [max_overflow: 10, size: 5],
+  port: 8086,
   scheme: "https",
   writer: Instream.Writer.Line,
   query_timeout: 30_000
 
 config :influx_copy, InfluxCopy.DestConn,
-  pool:   [ max_overflow: 10, size: 5 ],
-  port:   8086,
+  pool: [max_overflow: 10, size: 5],
+  port: 8086,
   scheme: "https",
   writer: Instream.Writer.Line,
   query_timeout: 30_000
